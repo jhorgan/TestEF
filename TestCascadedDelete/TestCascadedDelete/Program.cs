@@ -12,15 +12,15 @@ namespace TestCascadedDelete
         {
             var id = AddCapacityPlan();
             Console.WriteLine("Inserted Data");
-            Console.Read();
+            Console.ReadKey();
 
             FetchCapacityPlan(id);
             Console.WriteLine("Fetched Data");
-            Console.Read();
+            Console.ReadKey();
 
             DeleteCapacityPlan(id);
             Console.WriteLine("Deleted Data");
-            Console.Read();
+            Console.ReadKey();
         }
 
         private static int AddCapacityPlan()
@@ -98,7 +98,7 @@ namespace TestCascadedDelete
             Console.WriteLine("Inserted EfficiencyProfileDetails");
         }
 
-        private static void FetchCapacityPlan(int id)
+        private static CapacityPlan FetchCapacityPlan(int id)
         {
             var sw = Stopwatch.StartNew();
             Console.WriteLine("Fetching Capacity Plan... ");
@@ -117,10 +117,12 @@ namespace TestCascadedDelete
                     .Sum(pum => pum.EfficiencyProfileDetails.Count());
 
                 Console.WriteLine($"Fetched id {cp?.Id}, EfficiencyProfileDetails count: {efficiencyProfileDetailsCount} Time Taken: {sw.ElapsedMilliseconds} milliseconds");
+
+                return cp;
             }
         }
 
-        private static void DeleteCapacityPlan(int id)
+        private static void DeleteCapacityPlan(int capacityPlanId)
         {
             var sw = Stopwatch.StartNew();
             Console.WriteLine("Deleting Capacity Plan... ");
@@ -129,12 +131,39 @@ namespace TestCascadedDelete
             {
                 // context.Database.Log = Console.Write;
 
-                var cp = new CapacityPlan() { Id = id };
-                context.CapacityPlans.Attach(cp);
-                context.CapacityPlans.Remove(cp);
+                // Delete the EfficiencyProfileDetails
+                var q1 = from ef in context.EfficiencyProfileDetails
+                         join pum in context.ProductionUnitModes on ef.ProductionUnitModeId equals pum.Id
+                         join pu in context.ProductionUnits on pum.ProductionUnitId equals pu.Id
+                         where pu.CapacityPlanId == capacityPlanId
+                         select ef;
+
+                context.EfficiencyProfileDetails.RemoveRange(q1);
+
+                // Delete the ProductionUnitModes
+                var q2 = from pum in context.ProductionUnitModes
+                         join pu in context.ProductionUnits on pum.ProductionUnitId equals pu.Id
+                         where pu.CapacityPlanId == capacityPlanId
+                         select pum;
+
+                context.ProductionUnitModes.RemoveRange(q2);
+
+                // Delete the ProductionUnits
+                var q3 = from pu in context.ProductionUnits
+                    where pu.CapacityPlanId == capacityPlanId
+                    select pu;
+
+                context.ProductionUnits.RemoveRange(q3);
+
+                // Delete the ProductionUnits
+                var q4 = from cp in context.CapacityPlans
+                    where cp.Id == capacityPlanId
+                    select cp;
+
+                context.CapacityPlans.RemoveRange(q4);
 
                 var changes = context.SaveChanges();
-                Console.WriteLine($"Removing {id}. Removed {changes} rows. Time Taken: {sw.ElapsedMilliseconds} milliseconds");
+                Console.WriteLine($"Removing {capacityPlanId}. Removed {changes} rows. Time Taken: {sw.ElapsedMilliseconds} milliseconds");
             }
         }
     }

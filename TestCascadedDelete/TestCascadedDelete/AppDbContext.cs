@@ -21,21 +21,22 @@ namespace TestCascadedDelete
             modelBuilder.Entity<ProductionUnit>()
                 .HasRequired(pu => pu.CapacityPlan)
                 .WithMany(cp => cp.ProductionUnits)
-                .HasForeignKey(pu => pu.CapacityPlanId);
+                .HasForeignKey(pu => pu.CapacityPlanId)
+                .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<ProductionUnit>()
                 .HasKey(e => e.Id, config => config.IsClustered(false));
             modelBuilder.Entity<ProductionUnit>()
                 .HasIndex(e => e.CapacityPlanId)
                 .IsClustered();
-            
 
             // ProductionUnitMode configuration
             // Relationship between ProductionUnit => ProductionUnitMode
             modelBuilder.Entity<ProductionUnitMode>()
                 .HasRequired(pum => pum.ProductionUnit)
                 .WithMany(pu => pu.ProductionUnitModes)
-                .HasForeignKey(pum => pum.ProductionUnitId);
+                .HasForeignKey(pum => pum.ProductionUnitId)
+                .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<ProductionUnitMode>()
                 .HasKey(e => e.Id, config => config.IsClustered(false));
@@ -48,7 +49,8 @@ namespace TestCascadedDelete
             modelBuilder.Entity<EfficiencyProfileDetail>()
                 .HasRequired(epd => epd.ProductionUnitMode)
                 .WithMany(pum => pum.EfficiencyProfileDetails)
-                .HasForeignKey(efd => efd.ProductionUnitModeId);
+                .HasForeignKey(efd => efd.ProductionUnitModeId)
+                .WillCascadeOnDelete(false);
 
             modelBuilder.Entity<EfficiencyProfileDetail>()
                 .HasKey(e => e.Id, config => config.IsClustered(false));
