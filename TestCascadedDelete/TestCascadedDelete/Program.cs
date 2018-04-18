@@ -2,6 +2,7 @@
 using System.Data.Entity;
 using System.Diagnostics;
 using System.Linq;
+using System.Transactions;
 using TestCascadedDelete.Model;
 
 namespace TestCascadedDelete
@@ -127,14 +128,33 @@ namespace TestCascadedDelete
 
             using (var context = new AppDbContext())
             {
-                // context.Database.Log = Console.Write;
+                using (var scope = new TransactionScope())
+                {
 
-                var cp = new CapacityPlan() { Id = id };
-                context.CapacityPlans.Attach(cp);
-                context.CapacityPlans.Remove(cp);
+                    var sql1 = $@"DELETE FROM EfficiencyProfileDetail 
+	                            FROM EfficiencyProfileDetail 
+	                            INNER JOIN ProductionUnitMode ON ProductionUnitMode.Id = EfficiencyProfileDetail.ProductionUnitModeId
+	                            INNER JOIN ProductionUnit ON ProductionUnit.Id = ProductionUnitMode.ProductionUnitId
+	                            WHERE ProductionUnit.CapacityPlanId = {id}";
 
-                var changes = context.SaveChanges();
-                Console.WriteLine($"Removing {id}. Removed {changes} rows. Time Taken: {sw.ElapsedMilliseconds} milliseconds");
+                    var sql2 = $@"DELETE FROM ProductionUnitMode
+	                            FROM ProductionUnitMode 
+	                            INNER JOIN ProductionUnit ON ProductionUnit.Id = ProductionUnitMode.ProductionUnitId
+	                            WHERE ProductionUnit.CapacityPlanId = {id}";
+
+                    var sql3 = $@"DELETE FROM ProductionUnit WHERE ProductionUnit.CapacityPlanId = {id}";
+
+                    var sql4 = $@"DELETE FROM CapacityPlan WHERE Id = {id}";
+
+                    var changes = context.Database.ExecuteSqlCommand(sql1);
+                    changes += context.Database.ExecuteSqlCommand(sql2);
+                    changes += context.Database.ExecuteSqlCommand(sql3);
+                    changes += context.Database.ExecuteSqlCommand(sql4);
+
+                    scope.Complete();
+
+                    Console.WriteLine($"Removing {id}. Removed {changes} rows. Time Taken: {sw.ElapsedMilliseconds} milliseconds");
+                }
             }
         }
     }
